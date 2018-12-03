@@ -29,9 +29,11 @@
 
 
 from setuptools import setup, find_packages
-from distutils.dir_util import copy_tree
-import os
 import shutil
+import subprocess
+import sys
+import os
+from datetime import datetime
 
 
 __author__ = "Jack Lo"
@@ -39,56 +41,52 @@ __copyright__ = "Copyright 2017, Xilinx"
 __email__ = "jackl@xilinx.com"
 
 
-# global variables
-pynqcv_module_name = 'pynq_cv'
-board = os.environ['BOARD']
-repo_board_folder = 'boards/{}/'.format(board)
-board_notebooks_dir = os.environ['PYNQ_JUPYTER_NOTEBOOKS']
-pynqcv_data_files = []
+GIT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
-# check whether board is supported
-def check_env():
-    if not os.path.isdir(repo_board_folder):
-        raise ValueError("Board {} is not supported.".format(board))
-    if not os.path.isdir(board_notebooks_dir):
-        raise ValueError("Directory {} does not exist.".format(board_notebooks_dir))
+# Install packages
+def install_packages():
+    subprocess.check_call(['apt-get', '--yes', '--force-yes', 'install']),
+    subprocess.check_call(['pip3.6', 'install'])
+    print("Installing packages done ...")
 
 
-# copy overlays to python package
-def copy_overlays():
-    src_ol_dir = os.path.join(repo_board_folder, 'overlays')
-    dst_ol_dir = os.path.join(pynqcv_module_name, 'overlays')
-    copy_tree(src_ol_dir, dst_ol_dir)
-    pynqcv_data_files.extend([os.path.join("..", dst_ol_dir, f)
-                              for f in os.listdir(dst_ol_dir)])
-
-
-# copy notebooks to jupyter home
-def copy_notebooks():
-    src_nb_dir = os.path.join(repo_board_folder, 'notebooks')
-    dst_nb_dir = os.path.join(board_notebooks_dir, 'pynqOpenCV')
+# Notebook delivery
+def fill_notebooks():
+    src_nb = GIT_DIR + '/notebooks/computer_vision'
+    dst_nb_dir = '/home/xilinx/jupyter_notebooks/computer_vision'
     if os.path.exists(dst_nb_dir):
         shutil.rmtree(dst_nb_dir)
-    copy_tree(src_nb_dir, dst_nb_dir)
+    shutil.copytree(src_nb, dst_nb_dir)
+
+    print("Filling notebooks done ...")
 
 
-check_env()
-copy_overlays()
-copy_notebooks()
+if len(sys.argv) > 1 and sys.argv[1] == 'install':
+    install_packages()
+    fill_notebooks()
 
 
-setup(name=pynqcv_module_name,
-      version='2.3',
-      install_requires=['pynq>=2.3'],
+def package_files(directory):
+    paths = []
+    for (path, directories, file_names) in os.walk(directory):
+        for file_name in file_names:
+            paths.append(os.path.join('..', path, file_name))
+    return paths
+
+
+extra_files = package_files('pynq_computervision')
+
+
+setup(name='pynq_computervision',
+      version='2.1',
       description='PYNQ computer vision package',
-      license='BSD 3-Clause License',
       author='Xilinx computer vision group',
       author_email='jackl@xilinx.com',
       url='https://github.com/Xilinx/PYNQ-ComputerVision',
       packages=find_packages(),
       download_url='https://github.com/Xilinx/PYNQ-ComputerVision',
       package_data={
-          '': pynqcv_data_files,
+          '': extra_files,
       }
       )
